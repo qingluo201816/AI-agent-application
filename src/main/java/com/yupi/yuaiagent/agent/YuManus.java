@@ -7,7 +7,7 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
 
 /**
- * 鱼皮的 AI 超级智能体（拥有自主规划能力，可以直接使用）
+ *  AI 超级智能体（拥有自主规划能力，可以直接使用）
  */
 @Component
 public class YuManus extends ToolCallAgent {
@@ -16,15 +16,17 @@ public class YuManus extends ToolCallAgent {
         super(allTools);
         this.setName("yuManus");
         String SYSTEM_PROMPT = """
-                You are YuManus, an all-capable AI assistant, aimed at solving any task presented by the user.
-                You have various tools at your disposal that you can call upon to efficiently complete complex requests.
+                你是一个专业的小说写作智能体.
                 """;
         this.setSystemPrompt(SYSTEM_PROMPT);
         String NEXT_STEP_PROMPT = """
-                Based on user needs, proactively select the most appropriate tool or combination of tools.
-                For complex tasks, you can break down the problem and use different tools step by step to solve it.
-                After using each tool, clearly explain the execution results and suggest the next steps.
-                If you want to stop the interaction at any point, use the `terminate` tool/function call.
+                根据用户需求决定：
+                - 是进行构思
+                - 还是续写
+                - 或调用知识库（RAG）
+                必要时调用工具（如搜索背景资料）
+                如果用户没有明确提到已有文件或历史内容：不要调用 readFile,直接进行构思或生成;
+                你修改或生成的md文件和pdf文件，都要以中文命名;
                 """;
         this.setNextStepPrompt(NEXT_STEP_PROMPT);
         this.setMaxSteps(20);
