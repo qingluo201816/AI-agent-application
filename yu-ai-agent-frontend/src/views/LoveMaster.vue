@@ -33,6 +33,7 @@ import { chatWithWritingApp } from '../api'
 
 // 设置页面标题和元数据
 useHead({
+
   title: 'AI小说写作智能体 - 晴落AI智能体应用平台',
   meta: [
     {
@@ -42,6 +43,7 @@ useHead({
     {
       name: 'keywords',
       content: 'AI小说写作智能体,网文创作,AI写作助手,小说续写,剧情设计,晴落,AI智能体'
+
     }
   ]
 })
@@ -81,12 +83,14 @@ const sendMessage = (message) => {
   addMessage('', false)
   
   connectionStatus.value = 'connecting'
+
   hasReceivedChunk = false
   eventSource = chatWithWritingApp(message, chatId.value)
 
   eventSource.onopen = () => {
     connectionStatus.value = 'connected'
   }
+
 
   // 监听SSE消息
   eventSource.onmessage = (event) => {
