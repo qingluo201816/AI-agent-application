@@ -39,7 +39,7 @@ public class AiController {
      */
     @GetMapping("/writing_app/chat/sync")
     public String doChatWithWritingAppSync(String message, String chatId) {
-        return loveApp.doChat(message, chatId);
+        return loveApp.doChatWithRag(message, chatId);
     }
 
     /**
@@ -52,7 +52,7 @@ public class AiController {
     @GetMapping(value = "/writing_app/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> doChatWithWritingAppSSE(String message, String chatId) {
 
-        return loveApp.doChatByStream(message, chatId)
+        return loveApp.doChatWithRagByStream(message, chatId)
                 .concatWith(Mono.just("[DONE]"));
 
     }
@@ -66,7 +66,7 @@ public class AiController {
      */
     @GetMapping(value = "/writing_app/chat/server_sent_event")
     public Flux<ServerSentEvent<String>> doChatWithWritingAppServerSentEvent(String message, String chatId) {
-        return loveApp.doChatByStream(message, chatId)
+        return loveApp.doChatWithRagByStream(message, chatId)
                 .map(chunk -> ServerSentEvent.<String>builder()
                         .data(chunk)
                         .build());
@@ -84,7 +84,7 @@ public class AiController {
         // 创建一个超时时间较长的 SseEmitter
         SseEmitter sseEmitter = new SseEmitter(180000L); // 3 分钟超时
         // 获取 Flux 响应式数据流并且直接通过订阅推送给 SseEmitter
-        loveApp.doChatByStream(message, chatId)
+        loveApp.doChatWithRagByStream(message, chatId)
                 .subscribe(chunk -> {
                     try {
                         sseEmitter.send(chunk);

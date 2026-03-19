@@ -221,6 +221,29 @@ public class LoveApp {
         return content;
     }
 
+    /**
+     * 和 RAG 知识库进行对话（SSE 流式传输）
+     *
+     * @param message
+     * @param chatId
+     * @return
+     */
+    public Flux<String> doChatWithRagByStream(String message, String chatId) {
+        // 查询重写
+        String rewrittenMessage = queryRewriter.doQueryRewrite(message);
+        return chatClient
+                .prompt()
+                // 使用改写后的查询
+                .user(rewrittenMessage)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
+                // 开启日志，便于观察效果
+                .advisors(new MyLoggerAdvisor())
+                // 应用 RAG 知识库问答
+                .advisors(new QuestionAnswerAdvisor(loveAppVectorStore))
+                .stream()
+                .content();
+    }
+
     // AI 调用工具能力
     @Resource
     private ToolCallback[] allTools;
