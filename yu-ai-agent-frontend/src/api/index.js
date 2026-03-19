@@ -46,7 +46,7 @@ export const connectSSE = (url, params, onMessage, onError) => {
 
 // AI小说写作智能体聊天
 export const chatWithWritingApp = (message, chatId) => {
-  return connectSSE('/ai/writing_app/chat/sse', { message, chatId })
+  return connectSSE('/ai/love_app/chat/sse', { message, chatId })
 }
 
 // AI超级智能体聊天
