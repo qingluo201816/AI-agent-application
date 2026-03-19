@@ -15,11 +15,11 @@
 
 ## 项目功能梳理
 
-项目中，我们将开发一个 AI 恋爱大师应用、一个拥有自主规划能力的超级智能体，以及一系列工具和 MCP 服务。
+项目中，我们将开发一个 AI 小说写作智能体应用、一个拥有自主规划能力的超级智能体，以及一系列工具和 MCP 服务。
 
 具体需求如下：
 
-- AI 恋爱大师应用：用户在恋爱过程中难免遇到各种难题，让 AI 为用户提供贴心情感指导。支持多轮对话、对话记忆持久化、RAG 知识库检索、工具调用、MCP 服务调用。
+- AI 小说写作智能体应用：用户在在小说创作过程中难免遇到卡文问题，让 AI 为用户提供构思、续写与润色支持。支持多轮对话、对话记忆持久化、RAG 知识库检索、工具调用、MCP 服务调用。
 - AI 超级智能体：可以根据用户的需求，自主推理和行动，直到完成目标。
 - 提供给 AI 的工具：包括联网搜索、文件操作、网页抓取、资源下载、终端操作、PDF 生成。
 - AI MCP 服务：可以从特定网站搜索图片。
@@ -35,7 +35,7 @@
 | Controller | `com.yupi.yuaiagent.controller` | 提供 HTTP 接口（健康检查、AI 对话入口等）。 |
 | Agent | `com.yupi.yuaiagent.agent` | 智能体推理、工具编排、任务执行核心。 |
 | Agent Model | `com.yupi.yuaiagent.agent.model` | 智能体运行状态、上下文等结构定义。 |
-| App | `com.yupi.yuaiagent.app` | 面向业务场景的应用封装（如恋爱大师）。 |
+| App | `com.yupi.yuaiagent.app` | 面向业务场景的应用封装（如写作智能体）。 |
 | Advisor | `com.yupi.yuaiagent.advisor` | 会话增强能力（日志、重读等）。 |
 | RAG | `com.yupi.yuaiagent.rag` | 知识库加载、分片、检索与查询增强。 |
 | Tools | `com.yupi.yuaiagent.tools` | Agent 可调用的外部工具（搜索/抓取/文件/PDF 等）。 |
@@ -60,12 +60,12 @@
 - `package-info.java`：主包说明，定义该层作为业务聚合根。
 
 #### `com.yupi.yuaiagent.controller`
-- `AiController`：统一 AI HTTP 入口，暴露恋爱大师（同步/SSE）与超级智能体（SSE）接口。
+- `AiController`：统一 AI HTTP 入口，暴露写作智能体（同步/SSE）与超级智能体（SSE）接口。
 - `HealthController`：健康检查接口，供前端/运维验证服务存活。
 - `package-info.java`：Controller 分层职责说明。
 
 #### `com.yupi.yuaiagent.app`
-- `LoveApp`：恋爱大师应用服务层，封装 ChatClient、会话记忆、RAG、Tool Calling、MCP 调用能力。
+- `LoveApp`：写作智能体应用服务层，封装 ChatClient、会话记忆、RAG、Tool Calling、MCP 调用能力。
 - `package-info.java`：应用层职责说明（面向业务场景编排）。
 
 #### `com.yupi.yuaiagent.agent`
@@ -89,11 +89,11 @@
 - `package-info.java`：记忆模块说明。
 
 #### `com.yupi.yuaiagent.rag`
-- `LoveAppDocumentLoader`：加载恋爱知识文档（本地 Markdown 等）并供向量化入库。
+- `LoveAppDocumentLoader`：加载小说写作知识文档（本地 Markdown 等）并供向量化入库。
 - `MyTokenTextSplitter`：自定义文本切分策略，控制 chunk 大小与切分边界。
 - `MyKeywordEnricher`：查询关键词增强器，补充检索关键词召回率。
 - `QueryRewriter`：查询改写器，将用户输入改写为更利于检索/问答的表达。
-- `LoveAppVectorStoreConfig`：向量存储 Bean 配置（恋爱应用知识库）。
+- `LoveAppVectorStoreConfig`：向量存储 Bean 配置（小说写作应用知识库）。
 - `PgVectorVectorStoreConfig`：PgVector 向量库配置（数据库向量存储能力）。
 - `LoveAppContextualQueryAugmenterFactory`：上下文查询增强器工厂，组装检索上下文增强策略。
 - `LoveAppRagCustomAdvisorFactory`：自定义 RAG Advisor 工厂，拼装检索问答链路。
@@ -146,7 +146,7 @@
 
 ```mermaid
 flowchart LR
-    A[Vue Frontend<br/>:3000] -->|SSE /api/ai/love_app/chat/sse| B[AiController]
+    A[Vue Frontend<br/>:3000] -->|SSE /api/ai/writing_app/chat/sse| B[AiController]
     A -->|SSE /api/ai/manus/chat| B
 
     B --> C[LoveApp]
@@ -165,7 +165,7 @@ flowchart LR
 ```
 
 
-> 典型链路 1（恋爱大师）：`Frontend -> /ai/love_app/chat/sse -> AiController -> LoveApp -> ChatClient(记忆/Advisor/RAG/Tools/MCP)`。
+> 典型链路 1（写作智能体）：`Frontend -> /ai/love_app/chat/sse -> AiController -> LoveApp -> ChatClient(记忆/Advisor/RAG/Tools/MCP)`。
 >
 > 典型链路 2（超级智能体）：`Frontend -> /ai/manus/chat -> AiController -> YuManus -> ToolCallAgent 循环 -> 本地 Tool 或 MCP Tool`。
 
@@ -192,7 +192,7 @@ flowchart LR
 
 4. **联调自检（建议）**
    - 健康检查：`GET http://localhost:8123/api/health`
-   - 恋爱大师 SSE：`GET http://localhost:8123/api/ai/love_app/chat/sse?message=你好&chatId=test1`
+   - 写作智能体 SSE：`GET http://localhost:8123/api/ai/writing_app/chat/sse?message=你好&chatId=test1`
    - 超级智能体 SSE：`GET http://localhost:8123/api/ai/manus/chat?message=帮我做一个任务计划`
 
 5. **常见顺序建议**
@@ -254,12 +254,12 @@ flowchart LR
 
 - Prompt 工程概念
 - Prompt 优化技巧
-- AI 恋爱大师应用需求分析
-- AI 恋爱大师应用方案设计
+- AI 小说写作智能体应用需求分析
+- AI 小说写作智能体应用方案设计
 - Spring AI ChatClient / Advisor / ChatMemory 特性
 - 多轮对话 AI 应用开发
 - Spring AI 自定义 Advisor
-- Spring AI 结构化输出 - 恋爱报告功能
+- Spring AI 结构化输出 - 小说写作建议报告功能
 - Spring AI 对话记忆持久化
 - Spring AI Prompt 模板特性
 - 多模态概念和开发
@@ -268,7 +268,7 @@ flowchart LR
 
 第 4 期：RAG 知识库基础
 
-- AI 恋爱知识问答需求分析
+- AI 小说写作知识问答需求分析
 - RAG 概念（重点理解核心步骤）
 - RAG 实战：Spring AI + 本地知识库
 - RAG 实战：Spring AI + 云知识库服务

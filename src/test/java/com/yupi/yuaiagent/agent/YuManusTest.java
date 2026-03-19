@@ -14,9 +14,9 @@ class YuManusTest {
     @Test
     public void run() {
         String userPrompt = """
-                我的另一半居住在上海静安区，请帮我找到 5 公里内合适的约会地点，
-                并结合一些网络图片，制定一份详细的约会计划，
-                并以 PDF 格式输出""";
+                我在写现代都市小说，请帮我调研上海静安区适合写进剧情的 5 个地点，
+                并结合一些网络图片，为每个地点给出可用的场景描写要点，
+                并以 PDF 格式输出“场景素材集”""";
         String answer = yuManus.run(userPrompt);
         Assertions.assertNotNull(answer);
     }
