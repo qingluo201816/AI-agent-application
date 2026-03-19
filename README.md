@@ -98,6 +98,30 @@
 
 
 
+## 后端代码模块说明（新手速读）
+
+为了帮助不熟悉 Java 架构的同学快速上手，我在各个后端模块都补充了 `package-info.java` 注释。下面是模块职责总览：
+
+| 模块 | 路径 | 作用 |
+| --- | --- | --- |
+| 主包 | `com.yupi.yuaiagent` | 后端代码根命名空间，组织所有业务模块。 |
+| Controller | `com.yupi.yuaiagent.controller` | 提供 HTTP 接口（健康检查、AI 对话入口等）。 |
+| Agent | `com.yupi.yuaiagent.agent` | 智能体推理、工具编排、任务执行核心。 |
+| Agent Model | `com.yupi.yuaiagent.agent.model` | 智能体运行状态、上下文等结构定义。 |
+| App | `com.yupi.yuaiagent.app` | 面向业务场景的应用封装（如恋爱大师）。 |
+| Advisor | `com.yupi.yuaiagent.advisor` | 会话增强能力（日志、重读等）。 |
+| RAG | `com.yupi.yuaiagent.rag` | 知识库加载、分片、检索与查询增强。 |
+| Tools | `com.yupi.yuaiagent.tools` | Agent 可调用的外部工具（搜索/抓取/文件/PDF 等）。 |
+| ChatMemory | `com.yupi.yuaiagent.chatmemory` | 对话历史持久化与多轮上下文管理。 |
+| Config | `com.yupi.yuaiagent.config` | 全局配置（CORS、Bean 装配等）。 |
+| Constant | `com.yupi.yuaiagent.constant` | 项目共享常量定义。 |
+| Demo Invoke | `com.yupi.yuaiagent.demo.invoke` | 多种模型接入方式示例。 |
+| Demo RAG | `com.yupi.yuaiagent.demo.rag` | RAG 实验与示例代码。 |
+| MCP Server | `com.yupi.yuimagesearchmcpserver` | 独立图像搜索 MCP 服务。 |
+| MCP Tools | `com.yupi.yuimagesearchmcpserver.tools` | MCP 图像搜索工具实现。 |
+
+> 你可以直接打开上述模块目录下的 `package-info.java`，优先阅读每个模块注释，再看具体类代码。
+
 ## 用哪些技术？
 
 项目以 Spring AI 开发框架实战为核心，涉及到多种主流 AI 客户端和工具库的运用。
