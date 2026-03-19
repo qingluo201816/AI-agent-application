@@ -2,7 +2,7 @@
   <div class="love-master-container">
     <div class="header">
       <div class="back-button" @click="goBack">返回</div>
-      <h1 class="title">AI恋爱大师</h1>
+      <h1 class="title">AI小说写作智能体</h1>
       <div class="chat-id">会话ID: {{ chatId }}</div>
     </div>
     
@@ -11,7 +11,7 @@
         <ChatRoom 
           :messages="messages" 
           :connection-status="connectionStatus"
-          ai-type="love"
+          ai-type="writing"
           @send-message="sendMessage"
         />
       </div>
@@ -29,19 +29,19 @@ import { useRouter } from 'vue-router'
 import { useHead } from '@vueuse/head'
 import ChatRoom from '../components/ChatRoom.vue'
 import AppFooter from '../components/AppFooter.vue'
-import { chatWithLoveApp } from '../api'
+import { chatWithWritingApp } from '../api'
 
 // 设置页面标题和元数据
 useHead({
-  title: 'AI恋爱大师 - 鱼皮AI超级智能体应用平台',
+  title: 'AI小说写作智能体 - 晴落AI智能体应用平台',
   meta: [
     {
       name: 'description',
-      content: 'AI恋爱大师是鱼皮AI超级智能体应用平台的专业情感顾问，帮你解答各种恋爱问题，提供情感建议'
+      content: 'AI小说写作智能体是晴落AI智能体应用平台的专注网文创作辅导，帮助你进行构思、续写、润色与剧情设计'
     },
     {
       name: 'keywords',
-      content: 'AI恋爱大师,情感顾问,恋爱咨询,AI聊天,情感问题,鱼皮,AI智能体'
+      content: 'AI小说写作智能体,网文创作,AI写作助手,小说续写,剧情设计,晴落,AI智能体'
     }
   ]
 })
@@ -51,10 +51,11 @@ const messages = ref([])
 const chatId = ref('')
 const connectionStatus = ref('disconnected')
 let eventSource = null
+let hasReceivedChunk = false
 
 // 生成随机会话ID
 const generateChatId = () => {
-  return 'love_' + Math.random().toString(36).substring(2, 10)
+  return 'writing_' + Math.random().toString(36).substring(2, 10)
 }
 
 // 添加消息到列表
@@ -80,12 +81,18 @@ const sendMessage = (message) => {
   addMessage('', false)
   
   connectionStatus.value = 'connecting'
-  eventSource = chatWithLoveApp(message, chatId.value)
-  
+  hasReceivedChunk = false
+  eventSource = chatWithWritingApp(message, chatId.value)
+
+  eventSource.onopen = () => {
+    connectionStatus.value = 'connected'
+  }
+
   // 监听SSE消息
   eventSource.onmessage = (event) => {
-    const data = event.data
+    const data = event.data?.trim()
     if (data && data !== '[DONE]') {
+      hasReceivedChunk = true
       // 更新最新的AI消息内容，而不是创建新消息
       if (aiMessageIndex < messages.value.length) {
         messages.value[aiMessageIndex].content += data
@@ -101,7 +108,10 @@ const sendMessage = (message) => {
   // 监听SSE错误
   eventSource.onerror = (error) => {
     console.error('SSE Error:', error)
-    connectionStatus.value = 'error'
+    if (!hasReceivedChunk && aiMessageIndex < messages.value.length && !messages.value[aiMessageIndex].content) {
+      messages.value[aiMessageIndex].content = '当前对话连接异常，请确认后端已启动且接口为 /api/ai/writing_app/chat/sse。'
+    }
+    connectionStatus.value = hasReceivedChunk ? 'disconnected' : 'error'
     eventSource.close()
   }
 }
@@ -117,7 +127,7 @@ onMounted(() => {
   chatId.value = generateChatId()
   
   // 添加欢迎消息
-  addMessage('欢迎来到AI恋爱大师，请告诉我你的恋爱问题，我会尽力给予帮助和建议。', false)
+  addMessage('欢迎来到AI小说写作智能体，请告诉我你的创作目标或卡点，我会为你提供构思、续写与润色建议。', false)
 })
 
 // 组件销毁前关闭SSE连接
