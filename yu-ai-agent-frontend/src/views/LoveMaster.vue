@@ -113,7 +113,7 @@ const sendMessage = (message) => {
   eventSource.onerror = (error) => {
     console.error('SSE Error:', error)
     if (!hasReceivedChunk && aiMessageIndex < messages.value.length && !messages.value[aiMessageIndex].content) {
-      messages.value[aiMessageIndex].content = '当前对话连接异常，请确认后端已启动且接口为 /api/ai/writing_app/chat/sse。'
+      messages.value[aiMessageIndex].content = '当前对话连接异常，请确认后端已启动且接口为 /api/ai/love_app/chat/sse。'
     }
     connectionStatus.value = hasReceivedChunk ? 'disconnected' : 'error'
     eventSource.close()
