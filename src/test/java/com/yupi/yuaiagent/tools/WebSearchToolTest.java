@@ -5,8 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 @SpringBootTest
 class WebSearchToolTest {
 
@@ -19,5 +17,27 @@ class WebSearchToolTest {
         String query = "程序员鱼皮编程导航 codefather.cn";
         String result = webSearchTool.searchWeb(query);
         Assertions.assertNotNull(result);
+    }
+
+    @Test
+    void parseSearchResults_shouldSupportOrganicResults() {
+        String response = """
+                {
+                  "organic_results": [
+                    {"title": "t1", "link": "https://a.com", "snippet": "s1"},
+                    {"title": "t2", "link": "https://b.com", "snippet": "s2"}
+                  ]
+                }
+                """;
+        String result = WebSearchTool.parseSearchResults(response);
+        Assertions.assertTrue(result.contains("title: t1"));
+        Assertions.assertTrue(result.contains("https://a.com"));
+    }
+
+    @Test
+    void parseSearchResults_shouldHandleEmptyResults() {
+        String response = "{\"organic_results\": []}";
+        String result = WebSearchTool.parseSearchResults(response);
+        Assertions.assertEquals("No search results found.", result);
     }
 }

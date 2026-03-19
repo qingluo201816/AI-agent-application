@@ -1,6 +1,7 @@
 package com.yupi.yuaiagent.tools;
 
 import cn.hutool.core.io.FileUtil;
+import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.pdf.PdfDocument;
@@ -31,14 +32,10 @@ public class PDFGenerationTool {
             try (PdfWriter writer = new PdfWriter(filePath);
                  PdfDocument pdf = new PdfDocument(writer);
                  Document document = new Document(pdf)) {
-                // 自定义字体（需要人工下载字体文件到特定目录）
-//                String fontPath = Paths.get("src/main/resources/static/fonts/simsun.ttf")
-//                        .toAbsolutePath().toString();
-//                PdfFont font = PdfFontFactory.createFont(fontPath,
-//                        PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
-                // 使用内置中文字体
-                PdfFont font = PdfFontFactory.createFont("STSongStd-Light", "UniGB-UCS2-H");
-                document.setFont(font);
+                PdfFont font = createSafeFont();
+                if (font != null) {
+                    document.setFont(font);
+                }
                 // 创建段落
                 Paragraph paragraph = new Paragraph(content);
                 // 添加段落并关闭文档
@@ -47,6 +44,14 @@ public class PDFGenerationTool {
             return "PDF generated successfully to: " + filePath;
         } catch (IOException e) {
             return "Error generating PDF: " + e.getMessage();
+        }
+    }
+
+    private PdfFont createSafeFont() throws IOException {
+        try {
+            return PdfFontFactory.createFont(StandardFonts.HELVETICA);
+        } catch (Exception ignored) {
+            return null;
         }
     }
 }

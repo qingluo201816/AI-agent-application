@@ -2,7 +2,8 @@ package com.yupi.yuaiagent.tools;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class PDFGenerationToolTest {
 
@@ -13,5 +14,6 @@ class PDFGenerationToolTest {
         String content = "编程导航原创项目 https://www.codefather.cn";
         String result = tool.generatePDF(fileName, content);
         assertNotNull(result);
+        assertFalse(result.startsWith("Error generating PDF"));
     }
 }
