@@ -69,7 +69,14 @@ public class PDFGenerationTool {
             }
             try {
                 int ttcIndex = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
-                return PdfFontFactory.createTtcFont(path, ttcIndex, PdfEncodings.IDENTITY_H, PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
+                return PdfFontFactory.createTtcFont(
+                        path,
+                        ttcIndex,
+                        PdfEncodings.IDENTITY_H,
+                        PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED,
+                        true
+                );
+
             } catch (Exception e) {
                 log.warn("加载字体失败: {}", fontPath, e);
             }
