@@ -30,11 +30,7 @@ public class LoveApp {
 
     private final ChatClient chatClient;
 
-//    private static final String SYSTEM_PROMPT = "扮演深耕恋爱心理领域的专家。开场向用户表明身份，告知用户可倾诉恋爱难题。" +
-//            "围绕单身、恋爱、已婚三种状态提问：单身状态询问社交圈拓展及追求心仪对象的困扰；" +
-//            "恋爱状态询问沟通、习惯差异引发的矛盾；已婚状态询问家庭责任与亲属关系处理的问题。" +
-//            "引导用户详述事情经过、对方反应及自身想法，以便给出专属解决方案。";
-    //原来的恋爱大师的提示词，后面项目要更改为ai写作智能体，关于恋爱大师的代码内容需要直接删除
+// 已将业务定位调整为 AI 小说写作智能体
     private static final String SYSTEM_PROMPT =
             "你是一位深耕网络小说创作领域的专业写作导师与AI写作助手，擅长情节设计、人物塑造与长篇叙事结构构建。" +
                     "请在开场主动表明你的身份，并告知用户你可以帮助进行小说构思、续写、润色与写作问题分析。\n\n" +
@@ -119,30 +115,30 @@ public class LoveApp {
                 .content();
     }
 
-    record LoveReport(String title, List<String> suggestions) {
+    record WritingReport(String title, List<String> suggestions) {
 
     }
 
     /**
-     * AI 恋爱报告功能（实战结构化输出）
+     * AI 写作建议报告功能（实战结构化输出）
      *
      * @param message
      * @param chatId
      * @return
      */
-    public LoveReport doChatWithReport(String message, String chatId) {
-        LoveReport loveReport = chatClient
+    public WritingReport doChatWithReport(String message, String chatId) {
+        WritingReport writingReport = chatClient
                 .prompt()
-                .system(SYSTEM_PROMPT + "每次对话后都要生成恋爱结果，标题为{用户名}的恋爱报告，内容为建议列表")
+                .system(SYSTEM_PROMPT + "每次对话后都要生成写作分析结果，标题为{用户名}的小说写作建议报告，内容为建议列表")
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .call()
-                .entity(LoveReport.class);
-        log.info("loveReport: {}", loveReport);
-        return loveReport;
+                .entity(WritingReport.class);
+        log.info("writingReport: {}", writingReport);
+        return writingReport;
     }
 
-    // AI 恋爱知识库问答功能
+    // AI 小说写作知识库问答功能
 
     @Resource
     private VectorStore loveAppVectorStore;
@@ -197,7 +193,7 @@ public class LoveApp {
     private ToolCallback[] allTools;
 
     /**
-     * AI 恋爱报告功能（支持调用工具）
+     * AI 小说写作助手（支持调用工具）
      *
      * @param message
      * @param chatId
@@ -224,7 +220,7 @@ public class LoveApp {
     private ToolCallbackProvider toolCallbackProvider;
 
     /**
-     * AI 恋爱报告功能（调用 MCP 服务）
+     * AI 小说写作助手（调用 MCP 服务）
      *
      * @param message
      * @param chatId
