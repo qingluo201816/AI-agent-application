@@ -15,6 +15,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/ai")
@@ -121,7 +122,17 @@ public class AiController {
      */
     @GetMapping("/manus/chat")
     public SseEmitter doChatWithManus(String message) {
+        String ragChatId = "manus-rag-" + UUID.randomUUID();
+        String ragContext = loveApp.doChatWithRag(message, ragChatId);
+        String ragEnhancedMessage = """
+                用户原始需求：%s
+
+                下面是从本地 RAG 向量知识库检索得到的参考信息（请优先参考并按需验证）：
+                %s
+
+                请基于上述信息开始你的 ReAct 推理与工具调用流程。
+                """.formatted(message, ragContext);
         YuManus yuManus = new YuManus(allTools, dashscopeChatModel);
-        return yuManus.runStream(message);
+        return yuManus.runStream(ragEnhancedMessage);
     }
 }
