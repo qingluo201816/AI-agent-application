@@ -2,19 +2,19 @@
   <div class="home-container">
     <div class="header">
       <div class="glitch-wrapper">
-        <h1 class="glitch-title">鱼皮AI超级智能体</h1>
+        <h1 class="glitch-title">晴落AI智能体</h1>
       </div>
       <p class="subtitle">/ 探索AI的无限可能 /</p>
       <div class="cyber-line"></div>
     </div>
     
     <div class="apps-container">
-      <div class="app-card" @click="navigateTo('/love-master')">
+      <div class="app-card" @click="navigateTo('/writing-master')">
         <div class="card-glow"></div>
-        <div class="app-icon love-icon">❤️</div>
+        <div class="app-icon love-icon">✍️</div>
         <div class="app-info">
-          <div class="app-title">AI恋爱大师</div>
-          <div class="app-desc">智能情感顾问，帮你解答恋爱烦恼</div>
+          <div class="app-title">AI小说写作智能体</div>
+          <div class="app-desc">专业网文写作助手，帮你解决卡文与剧情设计难题</div>
         </div>
         <div class="app-button">
           <span class="btn-text">立即体验</span>
@@ -53,15 +53,15 @@ import AppFooter from '../components/AppFooter.vue'
 
 // 设置页面标题和元数据
 useHead({
-  title: '鱼皮AI超级智能体应用平台 - 首页',
+  title: '晴落AI智能体应用平台 - 首页',
   meta: [
     {
       name: 'description',
-      content: '鱼皮AI超级智能体应用平台提供AI恋爱大师和AI超级智能体服务，满足您的各种AI对话需求'
+      content: '晴落AI智能体应用平台提供AI小说写作智能体和AI超级智能体服务，满足您的各种AI对话需求'
     },
     {
       name: 'keywords',
-      content: 'AI智能体,AI应用,AI恋爱大师,AI助手,智能对话,鱼皮,AI超级智能体,首页'
+      content: 'AI智能体,AI应用,AI小说写作智能体,AI助手,智能对话,晴落,AI超级智能体,首页'
     }
   ]
 })
@@ -130,7 +130,7 @@ const navigateTo = (path) => {
 
 .glitch-title::before,
 .glitch-title::after {
-  content: '鱼皮AI超级智能体';
+  content: '晴落AI智能体';
   position: absolute;
   top: 0;
   left: 0;
