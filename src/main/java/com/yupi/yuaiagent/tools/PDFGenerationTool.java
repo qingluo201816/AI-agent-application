@@ -76,6 +76,7 @@ public class PDFGenerationTool {
                         PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED,
                         true
                 );
+
             } catch (Exception e) {
                 log.warn("加载字体失败: {}", fontPath, e);
             }
