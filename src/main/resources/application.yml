@@ -11,10 +11,11 @@ spring:
   ai:
     dashscope:
       # 需要替换为你自己的 key
-      api-key: your-api-key
+      api-key: sk-af6442e5ac1d4e8cae28f233061400d3
       chat:
         options:
           model: qwen-plus
+         #https://dashscope.aliyun.com/
     ollama:
       base-url: http://localhost:11434
       chat:
@@ -59,7 +60,7 @@ knife4j:
 # searchAPI
 search-api:
   # 需要替换为你自己的 key
-  api-key: 你的 API Key
+  api-key: sk-af6442e5ac1d4e8cae28f233061400d3
 # 修改日志级别，查看 Spring AI 更多调用细节
 logging:
   level:

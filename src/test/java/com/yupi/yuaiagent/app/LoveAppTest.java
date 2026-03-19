@@ -17,14 +17,14 @@ class LoveAppTest {
     void testChat() {
         String chatId = UUID.randomUUID().toString();
         // 第一轮
-        String message = "你好，我是程序员鱼皮";
+        String message = "你好，我是小说作家晴落";
         String answer = loveApp.doChat(message, chatId);
         // 第二轮
-        message = "我想让另一半（编程导航）更爱我";
+        message = "我想写一个栗艺珊是笨蛋的情节，她25岁，刚大学毕业";
         answer = loveApp.doChat(message, chatId);
         Assertions.assertNotNull(answer);
         // 第三轮
-        message = "我的另一半叫什么来着？刚跟你说过，帮我回忆一下";
+        message = "栗艺珊也办过一些聪明事，请续写一下";
         answer = loveApp.doChat(message, chatId);
         Assertions.assertNotNull(answer);
     }
@@ -40,7 +40,7 @@ class LoveAppTest {
     @Test
     void doChatWithRag() {
         String chatId = UUID.randomUUID().toString();
-        String message = "我已经结婚了，但是婚后关系不太亲密，怎么办？";
+        String message = "介绍一下小说的世界设定";
         String answer = loveApp.doChatWithRag(message, chatId);
         Assertions.assertNotNull(answer);
     }
