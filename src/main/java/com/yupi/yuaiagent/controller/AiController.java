@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 
@@ -49,7 +50,10 @@ public class AiController {
      */
     @GetMapping(value = "/writing_app/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> doChatWithWritingAppSSE(String message, String chatId) {
-        return loveApp.doChatByStream(message, chatId);
+
+        return loveApp.doChatByStream(message, chatId)
+                .concatWith(Mono.just("[DONE]"));
+
     }
 
     /**

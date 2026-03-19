@@ -33,15 +33,17 @@ import { chatWithWritingApp } from '../api'
 
 // 设置页面标题和元数据
 useHead({
-  title: 'AI小说写作智能体 - 鱼皮AI超级智能体应用平台',
+
+  title: 'AI小说写作智能体 - 晴落AI智能体应用平台',
   meta: [
     {
       name: 'description',
-      content: 'AI小说写作智能体是鱼皮AI超级智能体应用平台的专注网文创作辅导，帮助你进行构思、续写、润色与剧情设计'
+      content: 'AI小说写作智能体是晴落AI智能体应用平台的专注网文创作辅导，帮助你进行构思、续写、润色与剧情设计'
     },
     {
       name: 'keywords',
-      content: 'AI小说写作智能体,网文创作,AI写作助手,小说续写,剧情设计,鱼皮,AI智能体'
+      content: 'AI小说写作智能体,网文创作,AI写作助手,小说续写,剧情设计,晴落,AI智能体'
+
     }
   ]
 })
@@ -51,6 +53,7 @@ const messages = ref([])
 const chatId = ref('')
 const connectionStatus = ref('disconnected')
 let eventSource = null
+let hasReceivedChunk = false
 
 // 生成随机会话ID
 const generateChatId = () => {
@@ -80,12 +83,20 @@ const sendMessage = (message) => {
   addMessage('', false)
   
   connectionStatus.value = 'connecting'
+
+  hasReceivedChunk = false
   eventSource = chatWithWritingApp(message, chatId.value)
-  
+
+  eventSource.onopen = () => {
+    connectionStatus.value = 'connected'
+  }
+
+
   // 监听SSE消息
   eventSource.onmessage = (event) => {
-    const data = event.data
+    const data = event.data?.trim()
     if (data && data !== '[DONE]') {
+      hasReceivedChunk = true
       // 更新最新的AI消息内容，而不是创建新消息
       if (aiMessageIndex < messages.value.length) {
         messages.value[aiMessageIndex].content += data
@@ -101,7 +112,10 @@ const sendMessage = (message) => {
   // 监听SSE错误
   eventSource.onerror = (error) => {
     console.error('SSE Error:', error)
-    connectionStatus.value = 'error'
+    if (!hasReceivedChunk && aiMessageIndex < messages.value.length && !messages.value[aiMessageIndex].content) {
+      messages.value[aiMessageIndex].content = '当前对话连接异常，请确认后端已启动且接口为 /api/ai/writing_app/chat/sse。'
+    }
+    connectionStatus.value = hasReceivedChunk ? 'disconnected' : 'error'
     eventSource.close()
   }
 }
