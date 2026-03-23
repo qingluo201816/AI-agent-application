@@ -40,7 +40,7 @@ class LoveAppTest {
     @Test
     void doChatWithRag() {
         String chatId = UUID.randomUUID().toString();
-        String message = "介绍一下小说的世界设定";
+        String message = "主角是谁,主角的朋友有哪些";
         String answer = loveApp.doChatWithRag(message, chatId);
         Assertions.assertNotNull(answer);
     }
