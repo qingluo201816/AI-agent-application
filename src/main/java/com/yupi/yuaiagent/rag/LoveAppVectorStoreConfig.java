@@ -14,7 +14,8 @@ import java.util.List;
 /**
  * AI 写作智能体向量数据库配置（初始化基于内存的向量数据库 Bean）
  */
-@Configuration
+//启动本地文档RAG时开启
+//@Configuration
 public class LoveAppVectorStoreConfig {
 
     @Resource
