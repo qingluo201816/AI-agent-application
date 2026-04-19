@@ -90,11 +90,17 @@ public class WorkflowEngine {
                 context = executeDeliveryWithEvents(context, eventConsumer);
             }
 
-            if (context.getStatus() == TaskContext.TaskStatus.RUNNING) {
-                context.setStatus(TaskContext.TaskStatus.COMPLETED);
+            if (context.getErrorInfo() == null
+                    && context.getStatus() != TaskContext.TaskStatus.FAILED
+                    && context.getStatus() != TaskContext.TaskStatus.CANCELLED) {
+                if (context.getStatus() == TaskContext.TaskStatus.RUNNING) {
+                    context.setStatus(TaskContext.TaskStatus.COMPLETED);
+                }
                 context.setCurrentStage(WorkflowStage.COMPLETED);
-                emitEvent(eventConsumer, WorkflowEvent.Type.COMPLETED, context,
-                        "工作流完成");
+                String completionMessage = context.getStatus() == TaskContext.TaskStatus.PARTIAL_COMPLETED
+                        ? "工作流完成（部分完成）"
+                        : "工作流完成";
+                emitEvent(eventConsumer, WorkflowEvent.Type.COMPLETED, context, completionMessage);
             }
 
         } catch (Exception e) {
@@ -209,7 +215,7 @@ public class WorkflowEngine {
                 break;
             }
 
-            WorkflowStage fallbackStage = result.getSuggestedNextStage();
+            WorkflowStage fallbackStage = resolveFallbackStage(context, result);
             if (fallbackStage == null || !context.getCurrentStage().canFallbackTo(fallbackStage)) {
                 log.warn("无法回跳到建议阶段 {}，当前阶段 {}，强制结束",
                         fallbackStage, context.getCurrentStage());
@@ -222,6 +228,8 @@ public class WorkflowEngine {
                 case RETRIEVE -> {
                     context.fallbackTo(WorkflowStage.RETRIEVE);
                     context.incrementRetrievalRetry();
+                    log.info("回跳检索重试计数更新: taskId={}, retrievalRetryCount={}",
+                            context.getTaskId(), context.getRetrievalRetryCount());
                     log.info("回跳到检索阶段，当前检索重试次数: {}/{}", 
                             context.getRetrievalRetryCount(), maxRetrievalRetries);
                     context = executeRetrieval(context, maxRetrievalRetries);
@@ -284,7 +292,7 @@ public class WorkflowEngine {
             String feedback = evaluationService.buildRevisionFeedback(result);
             emitEvent(eventConsumer, WorkflowEvent.Type.EVALUATION_FEEDBACK, context, feedback);
 
-            WorkflowStage fallbackStage = result.getSuggestedNextStage();
+            WorkflowStage fallbackStage = resolveFallbackStage(context, result);
             if (fallbackStage == null || !context.getCurrentStage().canFallbackTo(fallbackStage)) {
                 emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_PROGRESS, context,
                         "评估结束，进入交付阶段");
@@ -297,6 +305,8 @@ public class WorkflowEngine {
                             "🔄 回跳到检索阶段补充信息...");
                     context.fallbackTo(WorkflowStage.RETRIEVE);
                     context.incrementRetrievalRetry();
+                    log.info("回跳检索重试计数更新: taskId={}, retrievalRetryCount={}",
+                            context.getTaskId(), context.getRetrievalRetryCount());
                     emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_PROGRESS, context,
                             String.format("检索重试次数: %d/%d",
                                     context.getRetrievalRetryCount(), DEFAULT_MAX_RETRIEVAL_RETRIES));
@@ -324,6 +334,39 @@ public class WorkflowEngine {
 
         context.setCurrentStage(WorkflowStage.DELIVER);
         return context;
+    }
+
+    private WorkflowStage resolveFallbackStage(TaskContext context, EvaluationResult result) {
+        WorkflowStage fallbackStage = result.getSuggestedNextStage();
+        if (fallbackStage != WorkflowStage.RETRIEVE) {
+            return fallbackStage;
+        }
+
+        boolean hasMissingContext = result.getMissingContextTypes() != null
+                && !result.getMissingContextTypes().isEmpty();
+        boolean hasRetrievalHints = hasRetrievalAdjustments(result);
+
+        if (!hasMissingContext && !hasRetrievalHints) {
+            log.info("评估建议回跳检索但缺乏检索线索，改为生成修订: taskId={}", context.getTaskId());
+            return WorkflowStage.GENERATE;
+        }
+        return fallbackStage;
+    }
+
+    private boolean hasRetrievalAdjustments(EvaluationResult result) {
+        EvaluationResult.SuggestedRetrievalAdjustments adjustments = result.getSuggestedRetrievalAdjustments();
+        if (adjustments == null) {
+            return false;
+        }
+        return adjustments.isExpandChapterRange()
+                || adjustments.isRelaxMetadataFilter()
+                || (adjustments.getIncreaseTopK() != null && adjustments.getIncreaseTopK() > 0)
+                || (adjustments.getSuggestedAdditionalContextTypes() != null
+                && !adjustments.getSuggestedAdditionalContextTypes().isEmpty())
+                || (adjustments.getSuggestedQueryKeywords() != null
+                && !adjustments.getSuggestedQueryKeywords().isEmpty())
+                || (adjustments.getSuggestedRetrievalStrategy() != null
+                && !adjustments.getSuggestedRetrievalStrategy().isBlank());
     }
 
     private TaskContext executeDelivery(TaskContext context) {

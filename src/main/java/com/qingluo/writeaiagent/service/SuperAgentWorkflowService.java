@@ -14,8 +14,13 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 超级智能体工作流服务
@@ -26,7 +31,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Service
 public class SuperAgentWorkflowService {
 
-    private static final long SSE_TIMEOUT_MILLIS = 300000L;
+    private static final long SSE_TIMEOUT_MILLIS = 900000L;
+    private static final long SSE_HEARTBEAT_INTERVAL_SECONDS = 15L;
 
     private final WorkflowEngine workflowEngine;
     private final FileBasedChatMemory chatMemory;
@@ -56,16 +62,19 @@ public class SuperAgentWorkflowService {
 
         String finalChatId = chatId;
         List<String> draftAccumulator = new CopyOnWriteArrayList<>();
-
-        workflowEngine.executeStream(
-                request.message(),
-                chatId,
-                chatMemory.get(chatId),
-                event -> handleWorkflowEvent(event, sseEmitter, draftAccumulator)
-        );
+        ScheduledExecutorService heartbeatExecutor = Executors.newSingleThreadScheduledExecutor();
+        ScheduledFuture<?> heartbeatTask = heartbeatExecutor.scheduleAtFixedRate(() -> {
+            try {
+                send(sseEmitter, "[HEARTBEAT]");
+            } catch (Exception e) {
+                log.debug("SSE心跳发送失败(忽略): chatId={}, error={}", finalChatId, e.getMessage());
+            }
+        }, SSE_HEARTBEAT_INTERVAL_SECONDS, SSE_HEARTBEAT_INTERVAL_SECONDS, TimeUnit.SECONDS);
 
         sseEmitter.onCompletion(() -> {
             log.info("SSE连接完成: chatId={}", finalChatId);
+            heartbeatTask.cancel(true);
+            heartbeatExecutor.shutdownNow();
             if (!draftAccumulator.isEmpty()) {
                 String fullDraft = String.join("", draftAccumulator);
                 sessionDrafts.put(finalChatId, draftAccumulator);
@@ -81,6 +90,30 @@ public class SuperAgentWorkflowService {
 
         sseEmitter.onTimeout(() -> {
             log.warn("SSE连接超时: chatId={}", finalChatId);
+            heartbeatTask.cancel(true);
+            heartbeatExecutor.shutdownNow();
+            send(sseEmitter, "");
+            send(sseEmitter, "【错误】连接超时，任务执行时间过长，请重试或缩小任务范围。");
+            sseEmitter.complete();
+        });
+
+        CompletableFuture.runAsync(() -> workflowEngine.executeStream(
+                request.message(),
+                chatId,
+                chatMemory.get(chatId),
+                event -> handleWorkflowEvent(event, sseEmitter, draftAccumulator)
+        )).exceptionally(ex -> {
+            log.error("异步执行工作流失败: chatId={}, error={}", finalChatId, ex.getMessage(), ex);
+            heartbeatTask.cancel(true);
+            heartbeatExecutor.shutdownNow();
+            try {
+                send(sseEmitter, "");
+                send(sseEmitter, "【错误】工作流执行失败: " + ex.getMessage());
+                sseEmitter.complete();
+            } catch (Exception ignored) {
+                log.warn("异步失败后的SSE收尾发送失败: chatId={}", finalChatId);
+            }
+            return null;
         });
 
         return sseEmitter;
