@@ -14,6 +14,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -57,13 +58,6 @@ public class SuperAgentWorkflowService {
         String finalChatId = chatId;
         List<String> draftAccumulator = new CopyOnWriteArrayList<>();
 
-        workflowEngine.executeStream(
-                request.message(),
-                chatId,
-                chatMemory.get(chatId),
-                event -> handleWorkflowEvent(event, sseEmitter, draftAccumulator)
-        );
-
         sseEmitter.onCompletion(() -> {
             log.info("SSE连接完成: chatId={}", finalChatId);
             if (!draftAccumulator.isEmpty()) {
@@ -81,6 +75,24 @@ public class SuperAgentWorkflowService {
 
         sseEmitter.onTimeout(() -> {
             log.warn("SSE连接超时: chatId={}", finalChatId);
+            sseEmitter.complete();
+        });
+
+        CompletableFuture.runAsync(() -> workflowEngine.executeStream(
+                request.message(),
+                chatId,
+                chatMemory.get(chatId),
+                event -> handleWorkflowEvent(event, sseEmitter, draftAccumulator)
+        )).exceptionally(ex -> {
+            log.error("异步执行工作流失败: chatId={}, error={}", finalChatId, ex.getMessage(), ex);
+            try {
+                send(sseEmitter, "");
+                send(sseEmitter, "【错误】工作流执行失败: " + ex.getMessage());
+                sseEmitter.complete();
+            } catch (Exception ignored) {
+                log.warn("异步失败后的SSE收尾发送失败: chatId={}", finalChatId);
+            }
+            return null;
         });
 
         return sseEmitter;
