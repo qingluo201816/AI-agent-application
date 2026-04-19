@@ -70,6 +70,14 @@ const router = useRouter()
 
 const generateChatId = () => `task_execution_${Math.random().toString(36).slice(2, 10)}`
 const generateMessageId = () => `task_message_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+const WORKFLOW_STEP_ORDER = ['intent', 'retrieve', 'generate', 'evaluate', 'deliver']
+const WORKFLOW_STEP_LABELS = {
+  intent: '意图识别',
+  retrieve: '知识检索',
+  generate: '内容生成',
+  evaluate: '质量评估',
+  deliver: '交付结果'
+}
 
 const chatId = ref(generateChatId())
 const messages = ref([])
@@ -86,6 +94,166 @@ const addMessage = (content, isUser, type = '') => {
   })
 }
 
+const createWorkflowTrace = () => ({
+  isRunning: true,
+  currentStepKey: 'intent',
+  currentSummary: '等待任务启动',
+  steps: WORKFLOW_STEP_ORDER.map((key, index) => ({
+    key,
+    title: WORKFLOW_STEP_LABELS[key],
+    status: index === 0 ? 'running' : 'pending',
+    summary: index === 0 ? '等待进入意图识别' : '等待执行'
+  })),
+  expectedPayload: '',
+  hasError: false
+})
+
+const getStepIndex = (key) => WORKFLOW_STEP_ORDER.indexOf(key)
+
+const setWorkflowStepStatus = (trace, stepKey, status, summary = '') => {
+  const targetIndex = getStepIndex(stepKey)
+  if (targetIndex < 0) {
+    return
+  }
+
+  trace.steps.forEach((step, index) => {
+    if (index < targetIndex && step.status === 'running') {
+      step.status = 'done'
+    }
+    if (index > targetIndex && status === 'running' && step.status !== 'error') {
+      step.status = 'pending'
+    }
+  })
+
+  const target = trace.steps[targetIndex]
+  if (status === 'running') {
+    for (let i = 0; i < targetIndex; i += 1) {
+      if (trace.steps[i].status !== 'error') {
+        trace.steps[i].status = 'done'
+      }
+    }
+  }
+  target.status = status
+  if (summary) {
+    target.summary = summary
+    trace.currentSummary = summary
+  }
+  trace.currentStepKey = stepKey
+}
+
+const markWorkflowDone = (trace, summary = '任务已完成') => {
+  trace.steps.forEach((step) => {
+    if (step.status !== 'error') {
+      step.status = 'done'
+    }
+  })
+  trace.isRunning = false
+  trace.currentStepKey = 'deliver'
+  trace.currentSummary = summary
+}
+
+const markWorkflowError = (trace, message) => {
+  const currentIndex = Math.max(0, getStepIndex(trace.currentStepKey))
+  trace.steps.forEach((step, index) => {
+    if (index < currentIndex && step.status !== 'error') {
+      step.status = 'done'
+    }
+  })
+  trace.steps[currentIndex].status = 'error'
+  trace.steps[currentIndex].summary = message
+  trace.isRunning = false
+  trace.hasError = true
+  trace.currentSummary = message
+}
+
+const resolveStepKeyByText = (text = '') => {
+  if (text.includes('意图')) return 'intent'
+  if (text.includes('检索')) return 'retrieve'
+  if (text.includes('生成')) return 'generate'
+  if (text.includes('评估')) return 'evaluate'
+  if (text.includes('交付') || text.includes('任务完成')) return 'deliver'
+  return ''
+}
+
+const applyWorkflowEvent = (message, rawData) => {
+  const trace = message.workflowTrace
+  const data = (rawData ?? '').trim()
+  if (!trace || !data) {
+    return
+  }
+
+  if (data === '[HEARTBEAT]') {
+    return
+  }
+
+  if (data === '[DONE]') {
+    markWorkflowDone(trace, '任务流已结束')
+    return
+  }
+
+  if (trace.expectedPayload === 'draft') {
+    message.content = data
+    trace.expectedPayload = ''
+    setWorkflowStepStatus(trace, 'generate', 'done', `生成完成，共 ${data.length} 字`)
+    return
+  }
+
+  if (trace.expectedPayload === 'evaluation_feedback') {
+    trace.expectedPayload = ''
+    setWorkflowStepStatus(trace, 'evaluate', 'running', data)
+    return
+  }
+
+  if (data === '【生成内容】') {
+    setWorkflowStepStatus(trace, 'generate', 'running', '正在生成正文内容...')
+    trace.expectedPayload = 'draft'
+    return
+  }
+
+  if (data === '【评估反馈】') {
+    setWorkflowStepStatus(trace, 'evaluate', 'running', '收到评估反馈，正在修订...')
+    trace.expectedPayload = 'evaluation_feedback'
+    return
+  }
+
+  if (data.startsWith('【阶段】')) {
+    const stageText = data.replace('【阶段】', '')
+    const nextStep = resolveStepKeyByText(stageText)
+    if (nextStep) {
+      setWorkflowStepStatus(trace, nextStep, 'running', stageText)
+    }
+    return
+  }
+
+  if (data.startsWith('【错误】')) {
+    markWorkflowError(trace, data.replace('【错误】', '').trim() || '执行出错')
+    return
+  }
+
+  if (data.startsWith('【交付报告】')) {
+    setWorkflowStepStatus(trace, 'deliver', 'done', '交付报告已生成')
+    trace.isRunning = false
+    return
+  }
+
+  if (data === '【任务完成】' || data.includes('工作流执行完成')) {
+    setWorkflowStepStatus(trace, 'deliver', 'done', '任务执行完成')
+    trace.isRunning = false
+    trace.currentSummary = '任务执行完成'
+    return
+  }
+
+  if (data.includes('✅ 内容通过评估')) {
+    setWorkflowStepStatus(trace, 'evaluate', 'done', '内容通过评估')
+    return
+  }
+
+  const inferredStep = resolveStepKeyByText(data)
+  if (inferredStep) {
+    setWorkflowStepStatus(trace, inferredStep, 'running', data)
+  }
+}
+
 const closeConnection = () => {
   if (activeConnection) {
     activeConnection.close()
@@ -99,6 +267,7 @@ const sendMessage = (message) => {
 
   const aiMessageIndex = messages.value.length
   addMessage('', false, 'ai-answer')
+  messages.value[aiMessageIndex].workflowTrace = createWorkflowTrace()
   connectionStatus.value = 'connecting'
 
   let hasReceivedChunk = false
@@ -113,6 +282,10 @@ const sendMessage = (message) => {
     const data = event.data ?? ''
 
     if (data === '[DONE]') {
+      const trace = messages.value[aiMessageIndex]?.workflowTrace
+      if (trace) {
+        markWorkflowDone(trace, trace.hasError ? '任务结束（含错误）' : '任务执行完成')
+      }
       connectionStatus.value = 'disconnected'
       if (activeConnection === connection) {
         connection.close()
@@ -122,12 +295,19 @@ const sendMessage = (message) => {
     }
 
     hasReceivedChunk = true
-    messages.value[aiMessageIndex].content += data
+    const aiMessage = messages.value[aiMessageIndex]
+    if (aiMessage) {
+      applyWorkflowEvent(aiMessage, data)
+    }
   }
 
   connection.onclose = () => {
     console.log('SSE连接已关闭')
     console.log('前端收到 done 事件，关闭 SSE 连接')
+    const aiMessage = messages.value[aiMessageIndex]
+    if (aiMessage?.workflowTrace?.isRunning) {
+      markWorkflowDone(aiMessage.workflowTrace, '连接关闭，流程结束')
+    }
     connectionStatus.value = 'disconnected'
     if (activeConnection === connection) {
       activeConnection = null
@@ -136,8 +316,12 @@ const sendMessage = (message) => {
 
   connection.onerror = (error) => {
     console.error('Task execution SSE error:', error)
-    if (!hasReceivedChunk && !messages.value[aiMessageIndex].content) {
-      messages.value[aiMessageIndex].content = '当前连接异常，请确认后端已启动，且任务执行与 PDF 生成接口可正常访问。'
+    const aiMessage = messages.value[aiMessageIndex]
+    if (!hasReceivedChunk && aiMessage && !aiMessage.content) {
+      aiMessage.content = '当前连接异常，请确认后端已启动，且任务执行与 PDF 生成接口可正常访问。'
+    }
+    if (aiMessage?.workflowTrace) {
+      markWorkflowError(aiMessage.workflowTrace, '连接异常，流程中断')
     }
     connectionStatus.value = hasReceivedChunk ? 'disconnected' : 'error'
     if (activeConnection === connection) {

@@ -27,7 +27,49 @@
               <AiAvatarFallback :type="aiType" />
             </div>
             <div class="message-bubble">
-              <div class="message-content">
+              <div
+                v-if="msg.workflowTrace"
+                class="workflow-card"
+              >
+                <button
+                  type="button"
+                  class="workflow-header"
+                  @click="toggleWorkflowCollapse(msg.id)"
+                >
+                  <div class="workflow-header-main">
+                    <span class="workflow-pill" :class="msg.workflowTrace.isRunning ? 'running' : msg.workflowTrace.hasError ? 'error' : 'done'">
+                      {{ msg.workflowTrace.isRunning ? '执行中' : msg.workflowTrace.hasError ? '异常结束' : '已完成' }}
+                    </span>
+                    <span class="workflow-progress">
+                      第 {{ getCurrentStepIndex(msg.workflowTrace) }}/{{ msg.workflowTrace.steps.length }} 步
+                    </span>
+                  </div>
+                  <span class="workflow-summary">{{ msg.workflowTrace.currentSummary }}</span>
+                  <span class="workflow-fold-indicator">{{ isWorkflowCollapsed(msg.id) ? '展开' : '收起' }}</span>
+                </button>
+
+                <div v-if="!isWorkflowCollapsed(msg.id)" class="workflow-steps">
+                  <div
+                    v-for="(step, stepIndex) in msg.workflowTrace.steps"
+                    :key="step.key"
+                    class="workflow-step"
+                    :class="[step.status, { active: step.key === msg.workflowTrace.currentStepKey }]"
+                  >
+                    <div class="workflow-step-marker">
+                      <span v-if="step.status === 'done'">✓</span>
+                      <span v-else-if="step.status === 'error'">!</span>
+                      <span v-else-if="step.status === 'running'">●</span>
+                      <span v-else>{{ stepIndex + 1 }}</span>
+                    </div>
+                    <div class="workflow-step-body">
+                      <div class="workflow-step-title">{{ step.title }}</div>
+                      <div class="workflow-step-summary">{{ step.summary }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="msg.content" class="message-content">
                 {{ msg.content }}
                 <span
                   v-if="showTypingIndicator && index === messages.length - 1"
@@ -130,6 +172,7 @@ const emit = defineEmits(['send-message'])
 const inputMessage = ref('')
 const messagesContainer = ref(null)
 const isNearBottom = ref(true)
+const workflowCollapseState = ref({})
 const lastMessageContent = computed(() => props.messages.at(-1)?.content ?? '')
 const lastMessageIsUser = computed(() => props.messages.at(-1)?.isUser ?? false)
 const isInputDisabled = computed(() => props.inputDisabled || props.connectionStatus === 'connecting')
@@ -154,6 +197,31 @@ const showTypingIndicator = computed(() =>
 )
 
 const showScrollToBottom = computed(() => props.messages.length > 0 && !isNearBottom.value)
+
+const isWorkflowCollapsed = (messageId) => {
+  if (!messageId) {
+    return true
+  }
+  if (workflowCollapseState.value[messageId] === undefined) {
+    workflowCollapseState.value[messageId] = true
+  }
+  return workflowCollapseState.value[messageId]
+}
+
+const toggleWorkflowCollapse = (messageId) => {
+  if (!messageId) {
+    return
+  }
+  workflowCollapseState.value[messageId] = !isWorkflowCollapsed(messageId)
+}
+
+const getCurrentStepIndex = (trace) => {
+  if (!trace?.steps?.length) {
+    return 1
+  }
+  const currentIndex = trace.steps.findIndex((step) => step.key === trace.currentStepKey)
+  return currentIndex >= 0 ? currentIndex + 1 : 1
+}
 
 const sendMessage = () => {
   const message = inputMessage.value.trim()
@@ -423,6 +491,147 @@ onBeforeUnmount(() => {
   background: var(--message-user-bg);
   color: #fff;
   box-shadow: 0 18px 40px rgba(27, 126, 255, 0.22);
+}
+
+.workflow-card {
+  margin-bottom: 12px;
+  border: 1px solid rgba(111, 190, 255, 0.22);
+  border-radius: 14px;
+  background: rgba(8, 20, 41, 0.78);
+  overflow: hidden;
+}
+
+.workflow-header {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  text-align: left;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.workflow-header-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workflow-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.workflow-pill.running {
+  background: rgba(56, 194, 255, 0.24);
+  color: #bff1ff;
+}
+
+.workflow-pill.done {
+  background: rgba(52, 214, 140, 0.2);
+  color: #b6f8d8;
+}
+
+.workflow-pill.error {
+  background: rgba(255, 106, 106, 0.2);
+  color: #ffd1d1;
+}
+
+.workflow-progress {
+  font-size: 12px;
+  color: rgba(203, 230, 255, 0.72);
+}
+
+.workflow-summary {
+  font-size: 14px;
+  color: rgba(228, 243, 255, 0.88);
+  line-height: 1.5;
+}
+
+.workflow-fold-indicator {
+  font-size: 12px;
+  color: rgba(163, 213, 255, 0.7);
+}
+
+.workflow-steps {
+  border-top: 1px solid rgba(111, 190, 255, 0.16);
+  padding: 12px 14px 14px;
+}
+
+.workflow-step {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 10px;
+  padding: 8px 0;
+  position: relative;
+}
+
+.workflow-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 34px;
+  width: 2px;
+  height: calc(100% - 12px);
+  background: rgba(119, 186, 255, 0.26);
+}
+
+.workflow-step-marker {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  border: 1px solid rgba(134, 196, 255, 0.38);
+  color: rgba(201, 229, 255, 0.84);
+  background: rgba(18, 35, 60, 0.85);
+}
+
+.workflow-step.running .workflow-step-marker {
+  border-color: rgba(66, 214, 255, 0.8);
+  color: #c8f5ff;
+  box-shadow: 0 0 0 5px rgba(53, 194, 255, 0.12);
+}
+
+.workflow-step.done .workflow-step-marker {
+  border-color: rgba(78, 223, 156, 0.9);
+  color: #c5ffe2;
+  background: rgba(28, 79, 56, 0.7);
+}
+
+.workflow-step.error .workflow-step-marker {
+  border-color: rgba(255, 127, 127, 0.9);
+  color: #ffe4e4;
+  background: rgba(90, 34, 34, 0.75);
+}
+
+.workflow-step.pending .workflow-step-marker {
+  opacity: 0.7;
+}
+
+.workflow-step-title {
+  font-size: 14px;
+  color: #e4f2ff;
+}
+
+.workflow-step-summary {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(193, 221, 248, 0.76);
+}
+
+.workflow-step.active .workflow-step-title {
+  color: #bdefff;
 }
 
 .message-content {
