@@ -49,61 +49,6 @@ public class WorkflowEngine {
     }
 
     /**
-     * 执行完整工作流（同步版本）
-     * @param userInput 用户输入
-     * @param sessionId 会话ID
-     * @param sessionHistory 会话历史
-     * @return 最终的任务上下文
-     */
-    public TaskContext execute(String userInput, String sessionId, List<Message> sessionHistory) {
-        return execute(userInput, sessionId, sessionHistory,
-                DEFAULT_MAX_REVISION_ROUNDS, DEFAULT_MAX_RETRIEVAL_RETRIES);
-    }
-
-    /**
-     * 执行完整工作流（同步版本，带最大轮次配置）
-     */
-    public TaskContext execute(
-            String userInput,
-            String sessionId,
-            List<Message> sessionHistory,
-            int maxRevisionRounds,
-            int maxRetrievalRetries
-    ) {
-        log.info("工作流开始: sessionId={}, maxRevision={}, maxRetrieval={}",
-                sessionId, maxRevisionRounds, maxRetrievalRetries);
-
-        TaskContext context = TaskContext.create(sessionId, userInput);
-        context.setStatus(TaskContext.TaskStatus.RUNNING);
-
-        try {
-            context = executeIntentParse(context, sessionHistory);
-
-            context = executeRetrieval(context, maxRetrievalRetries);
-
-            context = executeGeneration(context);
-
-            context = executeEvaluationAndDecide(context, maxRevisionRounds, maxRetrievalRetries);
-
-            if (context.getStatus() == TaskContext.TaskStatus.RUNNING) {
-                context = executeDelivery(context);
-            }
-
-            if (context.getStatus() == TaskContext.TaskStatus.RUNNING) {
-                context.setStatus(TaskContext.TaskStatus.COMPLETED);
-                context.setCurrentStage(WorkflowStage.COMPLETED);
-            }
-
-        } catch (Exception e) {
-            log.error("工作流执行异常: {}", e.getMessage(), e);
-            context.setError(TaskContext.ErrorInfo.ErrorType.UNKNOWN_ERROR, e.getMessage(), e);
-        }
-
-        log.info("工作流完成: {}, status={}", context.getExecutionSummary(), context.getStatus());
-        return context;
-    }
-
-    /**
      * 执行完整工作流（流式版本，用于SSE）
      * @param userInput 用户输入
      * @param sessionId 会话ID
@@ -115,21 +60,6 @@ public class WorkflowEngine {
             String sessionId,
             List<Message> sessionHistory,
             Consumer<WorkflowEvent> eventConsumer
-    ) {
-        executeStream(userInput, sessionId, sessionHistory, eventConsumer,
-                DEFAULT_MAX_REVISION_ROUNDS, DEFAULT_MAX_RETRIEVAL_RETRIES);
-    }
-
-    /**
-     * 执行完整工作流（流式版本，带最大轮次配置）
-     */
-    public void executeStream(
-            String userInput,
-            String sessionId,
-            List<Message> sessionHistory,
-            Consumer<WorkflowEvent> eventConsumer,
-            int maxRevisionRounds,
-            int maxRetrievalRetries
     ) {
         log.info("流式工作流开始: sessionId={}", sessionId);
 
@@ -144,7 +74,7 @@ public class WorkflowEngine {
 
             emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_START, context,
                     "检索阶段开始");
-            context = executeRetrievalWithEvents(context, maxRetrievalRetries, eventConsumer);
+            context = executeRetrievalWithEvents(context, eventConsumer);
 
             emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_START, context,
                     "生成阶段开始");
@@ -152,7 +82,7 @@ public class WorkflowEngine {
 
             emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_START, context,
                     "评估阶段开始");
-            context = executeEvaluationWithEvents(context, maxRevisionRounds, maxRetrievalRetries, eventConsumer);
+            context = executeEvaluationWithEvents(context, eventConsumer);
 
             if (context.getStatus() == TaskContext.TaskStatus.RUNNING) {
                 emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_START, context,
@@ -223,12 +153,11 @@ public class WorkflowEngine {
 
     private TaskContext executeRetrievalWithEvents(
             TaskContext context,
-            int maxRetrievalRetries,
             Consumer<WorkflowEvent> eventConsumer
     ) {
         emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_PROGRESS, context,
                 "正在检索相关上下文...");
-        context = executeRetrieval(context, maxRetrievalRetries);
+        context = executeRetrieval(context, DEFAULT_MAX_RETRIEVAL_RETRIES);
         int chunkCount = context.getRetrievedChunks() != null ? context.getRetrievedChunks().size() : 0;
         emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_PROGRESS, context,
                 String.format("检索完成，召回%d个相关片段", chunkCount));
@@ -323,20 +252,18 @@ public class WorkflowEngine {
 
     private TaskContext executeEvaluationWithEvents(
             TaskContext context,
-            int maxRevisionRounds,
-            int maxRetrievalRetries,
             Consumer<WorkflowEvent> eventConsumer
     ) {
         int iteration = 0;
         while (true) {
             iteration++;
-            if (iteration > maxRevisionRounds * 2 + 2) {
+            if (iteration > DEFAULT_MAX_REVISION_ROUNDS * 2 + 2) {
                 emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_PROGRESS, context,
                         "评估循环次数过多，强制结束");
                 break;
             }
 
-            if (context.isMaxRetriesReached(maxRevisionRounds, maxRetrievalRetries)) {
+            if (context.isMaxRetriesReached(DEFAULT_MAX_REVISION_ROUNDS, DEFAULT_MAX_RETRIEVAL_RETRIES)) {
                 emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_PROGRESS, context,
                         "达到最大重试次数，结束评估");
                 break;
@@ -369,13 +296,21 @@ public class WorkflowEngine {
                     emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_PROGRESS, context,
                             "🔄 回跳到检索阶段补充信息...");
                     context.fallbackTo(WorkflowStage.RETRIEVE);
-                    context = executeRetrievalWithEvents(context, maxRetrievalRetries, eventConsumer);
+                    context.incrementRetrievalRetry();
+                    emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_PROGRESS, context,
+                            String.format("检索重试次数: %d/%d",
+                                    context.getRetrievalRetryCount(), DEFAULT_MAX_RETRIEVAL_RETRIES));
+                    context = executeRetrievalWithEvents(context, eventConsumer);
                     context = executeGenerationWithEvents(context, eventConsumer);
                 }
                 case GENERATE -> {
                     emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_PROGRESS, context,
                             "🔄 回跳到生成阶段进行修订...");
                     context.fallbackTo(WorkflowStage.GENERATE);
+                    context.incrementRevision();
+                    emitEvent(eventConsumer, WorkflowEvent.Type.STAGE_PROGRESS, context,
+                            String.format("修订次数: %d/%d",
+                                    context.getRevisionCount(), DEFAULT_MAX_REVISION_ROUNDS));
                     generationService.revise(context, feedback);
                     int wordCount = context.getCurrentDraft() != null ? context.getCurrentDraft().length() : 0;
                     emitEvent(eventConsumer, WorkflowEvent.Type.DRAFT_GENERATED, context,
