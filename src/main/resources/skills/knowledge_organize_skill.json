@@ -1,0 +1,121 @@
+{
+  "skill_id": "knowledge_organize",
+  "name": "知识编排 Skill",
+  "version": "v1.0",
+  "description": "将小说内容整理成适合 RAG 入库的标准 Markdown 文档",
+  "type": "KNOWLEDGE_ORGANIZE",
+  "entry_points": [
+    {
+      "name": "knowledge_organize",
+      "description": "标准化知识编排入口",
+      "parameters": {
+        "content": "待编排的文本内容",
+        "book_name": "书籍名称",
+        "knowledge_type": "知识类型：CHARACTER_SHEET, WORLDVIEW, FACTION_LOCATION_TERM, TIMELINE, PLOT_SUMMARY, MYSTERY_CLUE, RELATIONSHIP, COMPREHENSIVE"
+      }
+    }
+  ],
+  "trigger_conditions": {
+    "keywords": [
+      "整理成可检索",
+      "生成设定文档",
+      "结构化沉淀",
+      "沉淀成知识",
+      "整理成知识",
+      "归档",
+      "生成知识文档",
+      "人物设定文档",
+      "世界观设定",
+      "时间线整理",
+      "剧情摘要",
+      "势力设定",
+      "角色档案",
+      "关系图谱",
+      "知识沉淀"
+    ],
+    "patterns": [
+      "整理.*人物.*档案",
+      "沉淀.*知识",
+      "生成.*设定.*文档",
+      "整理成.*可检索"
+    ]
+  },
+  "supported_knowledge_types": [
+    {
+      "type": "CHARACTER_SHEET",
+      "description": "人物设定",
+      "section_types": ["character", "relationship"],
+      "entry_types": ["character", "relationship"]
+    },
+    {
+      "type": "WORLDVIEW",
+      "description": "世界观设定",
+      "section_types": ["worldview", "power_system", "terminology"],
+      "entry_types": ["world_rule", "power_system", "terminology"]
+    },
+    {
+      "type": "FACTION_LOCATION_TERM",
+      "description": "势力/地点/术语",
+      "section_types": ["faction", "location", "terminology"],
+      "entry_types": ["faction", "location", "terminology"]
+    },
+    {
+      "type": "TIMELINE",
+      "description": "时间线",
+      "section_types": ["timeline"],
+      "entry_types": ["timeline_event"]
+    },
+    {
+      "type": "PLOT_SUMMARY",
+      "description": "主线剧情摘要",
+      "section_types": ["plot"],
+      "entry_types": ["plot_event"]
+    },
+    {
+      "type": "MYSTERY_CLUE",
+      "description": "伏笔/谜团/反转线索",
+      "section_types": ["mystery"],
+      "entry_types": ["mystery"]
+    },
+    {
+      "type": "RELATIONSHIP",
+      "description": "人物关系",
+      "section_types": ["relationship"],
+      "entry_types": ["relationship"]
+    },
+    {
+      "type": "COMPREHENSIVE",
+      "description": "综合知识手册",
+      "section_types": ["character", "relationship", "worldview", "faction", "location", "plot", "timeline", "mystery"],
+      "entry_types": ["character", "relationship", "world_rule", "faction", "location", "plot_event", "timeline_event", "mystery", "terminology"]
+    }
+  ],
+  "output_specification": {
+    "front_matter_fields": [
+      "book_name",
+      "source_type",
+      "doc_type",
+      "generated_by",
+      "version"
+    ],
+    "section_marker": "##",
+    "entry_marker": "###",
+    "metadata_format": "- key: value",
+    "chunk_target_size": "700 tokens",
+    "metadata_filter_fields": [
+      "section_type",
+      "entry_type",
+      "character_name",
+      "plot_line",
+      "timeline_stage",
+      "book_name",
+      "entry_id",
+      "chunk_index"
+    ]
+  },
+  "compatibility": {
+    "document_loader": "WriteAppDocumentLoader",
+    "vector_store": "PgVectorVectorStore",
+    "chunking_strategy": "TokenTextSplitter"
+  }
+}
