@@ -14,19 +14,19 @@ import java.util.Map;
 @SpringBootTest
 class PgVectorVectorStoreConfigTest {
 
-    @Resource
-    private VectorStore pgVectorVectorStore;
+    @Resource(name = "writeAppVectorStore")
+    private VectorStore writeAppVectorStore;
 
     @Test
-    void pgVectorVectorStore() {
+    void writeAppVectorStore() {
         List<Document> documents = List.of(
-                new Document("鱼皮的编程导航有什么用？学编程啊，做项目啊", Map.of("meta1", "meta1")),
-                new Document("程序员鱼皮的原创项目教程 codefather.cn"),
-                new Document("鱼皮这小伙子比较帅气", Map.of("meta2", "meta2")));
-        // 添加文档
-        pgVectorVectorStore.add(documents);
-        // 相似度查询
-        List<Document> results = pgVectorVectorStore.similaritySearch(SearchRequest.builder().query("怎么学编程啊").topK(3).build());
+                new Document("学习编程最重要的是持续练习和建立反馈闭环", Map.of("meta1", "meta1")),
+                new Document("codefather.cn 提供了很多编程和 AI 相关内容"),
+                new Document("系统化拆解问题比盲目试错更有效", Map.of("meta2", "meta2")));
+        writeAppVectorStore.add(documents);
+        List<Document> results = writeAppVectorStore.similaritySearch(
+                SearchRequest.builder().query("怎么学习编程").topK(3).build()
+        );
         Assertions.assertNotNull(results);
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.Collections;
@@ -16,6 +17,7 @@ import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgDistan
 import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.HNSW;
 
 @Configuration
+@Profile("pgvector")
 public class PgVectorVectorStoreConfig {
 
     private static final int EMBEDDING_BATCH_SIZE = 25;

@@ -6,7 +6,6 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
-import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -97,12 +96,6 @@ public class WriteApp {
     private VectorStore writeAppVectorStore;
 
     @Resource
-    private Advisor writeAppRagCloudAdvisor;
-
-    @Resource
-    private VectorStore pgVectorVectorStore;
-
-    @Resource
     private QueryRewriter queryRewriter;
 
     public String doChatWithRag(String message, String chatId) {
@@ -117,9 +110,7 @@ public class WriteApp {
                 .user(rewrittenMessage)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .advisors(new MyLoggerAdvisor())
-//                .advisors(new QuestionAnswerAdvisor(writeAppVectorStore))
-//                .advisors(writeAppRagCloudAdvisor)
-                .advisors(new QuestionAnswerAdvisor(pgVectorVectorStore))
+                .advisors(new QuestionAnswerAdvisor(writeAppVectorStore))
 //                .advisors(
 //                        WriteAppRagCustomAdvisorFactory.createWriteAppRagCustomAdvisor(
 //                                writeAppVectorStore, "主角"
@@ -144,8 +135,7 @@ public class WriteApp {
                 .user(rewrittenMessage)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .advisors(new MyLoggerAdvisor())
-//                .advisors(new QuestionAnswerAdvisor(writeAppVectorStore))
-                .advisors(new QuestionAnswerAdvisor(pgVectorVectorStore))
+                .advisors(new QuestionAnswerAdvisor(writeAppVectorStore))
                 .stream()
                 .content();
     }

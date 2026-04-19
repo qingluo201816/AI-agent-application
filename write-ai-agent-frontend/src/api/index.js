@@ -117,6 +117,7 @@ export const chatWithNovelStateMemory = createNovelStreamConnector('/ai/novel/st
 export const chatWithNovelInspirationAssist = createNovelStreamConnector('/ai/novel/inspiration-assist/sse')
 export const chatWithNovelKeywordContinuation = createNovelStreamConnector('/ai/novel/keyword-continuation/sse')
 export const chatWithNovelTaskExecutionPdf = createNovelStreamConnector('/ai/novel/task-execution-pdf/sse')
+export const chatWithSuperAgent = createNovelStreamConnector('/ai/super-agent/chat/sse')
 
 export const listNovelSessions = async (mode) => {
   const response = await request.get('/ai/novel/sessions', {
@@ -156,6 +157,7 @@ export default {
   chatWithNovelKeywordContinuation,
   chatWithNovelTaskExecutionPdf,
   chatWithManus,
+  chatWithSuperAgent,
   listNovelSessions,
   createNovelSession,
   getNovelSessionDetail,

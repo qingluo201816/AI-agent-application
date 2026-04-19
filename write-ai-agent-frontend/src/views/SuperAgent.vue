@@ -50,7 +50,7 @@ import { useHead } from '@vueuse/head'
 import { useRouter } from 'vue-router'
 import AppFooter from '../components/AppFooter.vue'
 import ChatRoom from '../components/ChatRoom.vue'
-import { chatWithNovelTaskExecutionPdf } from '../api'
+import { chatWithSuperAgent } from '../api'
 
 useHead({
   title: 'AI 超级写作智能体 - 晴落 AI 写作智能体平台',
@@ -102,7 +102,7 @@ const sendMessage = (message) => {
   connectionStatus.value = 'connecting'
 
   let hasReceivedChunk = false
-  const connection = chatWithNovelTaskExecutionPdf(message, chatId.value)
+  const connection = chatWithSuperAgent(message, chatId.value)
   activeConnection = connection
 
   connection.onopen = () => {
@@ -123,6 +123,15 @@ const sendMessage = (message) => {
 
     hasReceivedChunk = true
     messages.value[aiMessageIndex].content += data
+  }
+
+  connection.onclose = () => {
+    console.log('SSE连接已关闭')
+    console.log('前端收到 done 事件，关闭 SSE 连接')
+    connectionStatus.value = 'disconnected'
+    if (activeConnection === connection) {
+      activeConnection = null
+    }
   }
 
   connection.onerror = (error) => {

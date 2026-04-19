@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: ${PGVECTOR_DB_URL:jdbc:postgresql://localhost:5432/write_agent}
+    username: ${PGVECTOR_DB_USERNAME:postgres}
+    password: ${PGVECTOR_DB_PASSWORD:postgres}
+    hikari:
+      minimum-idle: 0
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  ai:
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        dimensions: 1536
+        distance-type: COSINE_DISTANCE
+        max-document-batch-size: 25
